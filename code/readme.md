@@ -1,1 +1,1 @@
-Folder for colde
+Folder for partial master's thesis code
