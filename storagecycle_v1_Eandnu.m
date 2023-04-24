@@ -1,16 +1,21 @@
 function [finelepair,finE2sim,finE4str,kmean,finvecvalmean] = storagecycle_v1_Eandnu(imat,jmat,kele,Esampled,samples,freedofs)        
 % the simulation is done using input samples
 
-% TheMean = 1; %mean of random field
-% TheCOV = 0.35; %Guest cantilever literature cantilever (large var)
+% Inputs:
+% imat: FEA matrix row position of ele stiff matrix (8 x 8 x nele)
+% jmat: FEA matrix column position of ele stiff matrix (8 x 8 x nele)
+% kele: element stiffness matrices (8 x 8 x nele)
+% Esampled: Monte-Carlo sample of Young's modulus random field (nele x samples)
+% samples: # of Monte-Carlo samples 
+% freedofs: index for free degrees of freedom (ndof x 1) 
 
-% RFinput.LNMean = TheMean  ;
-% RFinput.LNStdv = TheCOV * RFinput.LNMean ; 
-% FGStdv = sqrt(log((RFinput.LNStdv / RFinput.LNMean)^2 +1));
-% FGMean =  log(RFinput.LNMean) - 0.5 * (FGStdv)^2;
+% Outputs:
+% finelepair: the pair of elements, i and j, contributing to a FEA matrix entry
+% finE2sim: expected value of Ei*Ej (product of modulus i * modulus j)
+% finE4str: expected value of sample wise Ei*Ej*Ek*El
+% kmean: mean of stiffness matrix (only freedofs)
+% finvecvalmean: expected value of overall Ei*Ej*Ek*El
 
-% lc = [100,30]; %2D long correlation length for cantilever beam
-% E0 = 1; % wheel
 
 % generate E statistics 
 parpool(4);
@@ -32,12 +37,12 @@ for i = 1:size(kele,3)
     elemnum(:,:,i) = elemnum(:,:,i)*i;
 end
 
-% initial mapping
+% initial mapping of element pairs with matrix entries
 colj = jmat(:); rowi = imat(:); elemnum = elemnum(:); 
 consts = reshape(kele,[numel(colj),size(kele,4)]);
 consts = consts.*Esampled(elemnum,:);
 
-clear Esampled 
+clear Esampled  % save memory
 
 %removing fixed D.O.F entries
 freeidx = ismember(colj,freedofs)&ismember(rowi,freedofs);
@@ -58,6 +63,7 @@ finelepair = zeros(1e6,2);
 finvecvalmean = zeros(1e6,1);
 
 % traverse through sorted column, populate row entries
+% make sure only unique entries are considered 
 coljindx = unique(colj);
 
 indxctr = 0; 
@@ -127,7 +133,7 @@ for j = 1:length(coljindx)
     end
 end
 
-clear consts constm elemnum colj rowi freeidx coljindx
+clear consts constm elemnum colj rowi freeidx coljindx %save memory
 
 finelepair = finelepair(1:indxctr,:);
 finvecval = finvecval(1:indxctr,:);
@@ -149,7 +155,7 @@ end
 finelepair = pairele;
 finvecval = valele;
 finvecvalmean = valmeanele;
-clear pairele valele valmeanele
+clear pairele valele valmeanele %save memory
 
 
 
